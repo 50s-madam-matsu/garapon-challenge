@@ -26,6 +26,8 @@
     --green:#1F5D42;
     --green-deep:#123A29;
     --navy:#1B2A4A;
+    --teal:#2D8F97;
+    --teal-deep:#1F6067;
     --cream:#FBF3E1;
     --line:rgba(184,140,45,0.35);
     --shadow:0 14px 34px rgba(120,86,30,0.16);
@@ -57,10 +59,11 @@
     position:fixed;
     inset:0;
     z-index:-1;
+    background-color:#2D929F;
     background-image:url("assets/background.jpg");
     background-repeat:no-repeat;
     background-position:center center;
-    background-size:cover;
+    background-size:contain;
   }
 
   .stage{
@@ -89,11 +92,18 @@
     margin-top:8px;
   }
   .tagline{
-    font-size:14px;
-    color:var(--paper-dim);
+    display:block;
+    width:fit-content;
+    max-width:300px;
+    margin:14px auto 0;
+    background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+    color:var(--cream);
+    font-size:13px;
     text-align:center;
     line-height:1.8;
-    max-width:320px;
+    padding:9px 20px;
+    border-radius:999px;
+    box-shadow:0 6px 16px rgba(31,96,103,0.28);
   }
 
   /* ---------- panel shell ---------- */
