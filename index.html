@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ガラポンチャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* =====================================================
+     ▼ 店舗ごとの設定はここではなく、下の <script> 内の
+       CONFIG オブジェクト（ファイル下部）で編集してください。
+     ===================================================== */
+
+  :root{
+    --bg-0:#F7EEDC;
+    --bg-1:#FFFDF6;
+    --bg-2:#FBF1DA;
+    --paper:#2B2118;
+    --paper-dim:#6b5a41;
+    --gold:#C89A3C;
+    --gold-soft:#8a6215;
+    --red:#B5271F;
+    --red-deep:#7A1710;
+    --green:#1F5D42;
+    --green-deep:#123A29;
+    --navy:#1B2A4A;
+    --cream:#FBF3E1;
+    --line:rgba(184,140,45,0.35);
+    --shadow:0 14px 34px rgba(120,86,30,0.16);
+    --radius:20px;
+  }
+
+  *{box-sizing:border-box;}
+  html{
+    height:auto;
+    min-height:100%;
+  }
+  body{
+    margin:0;
+    min-height:100vh;
+    min-height:100dvh;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    background-color:var(--bg-0);
+    position:relative;
+    color:var(--paper);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 48px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    background-image:url("assets/background.jpg");
+    background-repeat:no-repeat;
+    background-position:center center;
+    background-size:cover;
+  }
+
+  .stage{
+    width:100%;
+    max-width:460px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+
+  /* ---------- header ---------- */
+  .header-logo{
+    width:100%;
+    max-width:475px;
+    height:auto;
+    display:block;
+    margin:0 auto;
+  }
+  .shopname{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:15px;
+    color:var(--paper-dim);
+    text-align:center;
+    margin-top:8px;
+  }
+  .tagline{
+    font-size:14px;
+    color:var(--paper-dim);
+    text-align:center;
+    line-height:1.8;
+    max-width:320px;
+  }
+
+  /* ---------- panel shell ---------- */
+  .panel{
+    width:100%;
+    background:var(--bg-1);
+    border:2px solid var(--gold);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .panel::before{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(115deg, rgba(184,140,45,0.06) 0 2px, transparent 2px 26px);
+    pointer-events:none;
+  }
+
+  /* ---------- setup screen ---------- */
+  #setup label{
+    display:block;
+    font-size:12px;
+    letter-spacing:.08em;
+    color:var(--paper-dim);
+    margin-bottom:10px;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    margin:6px 0 14px;
+  }
+  .stepper button{
+    width:46px; height:46px;
+    border-radius:50%;
+    border:none;
+    background:var(--green);
+    color:var(--cream);
+    font-size:22px;
+    font-weight:700;
+    cursor:pointer;
+    transition:transform .12s ease, background .2s ease;
+  }
+  .stepper button.plus{
+    background:var(--red);
+  }
+  .stepper button:active{transform:scale(0.92);}
+  .stepper .count{
+    font-family:'JetBrains Mono', monospace;
+    font-size:40px;
+    font-weight:700;
+    min-width:64px;
+    text-align:center;
+    color:var(--paper);
+  }
+  .cost-line{
+    text-align:center;
+    background:rgba(200,154,60,0.14);
+    border:2px dashed var(--gold);
+    border-radius:12px;
+    padding:10px 12px 12px;
+    margin-bottom:18px;
+  }
+  .cost-detail{
+    display:block;
+    font-size:12.5px;
+    color:var(--paper-dim);
+    margin-bottom:4px;
+  }
+  .cost-detail b{color:var(--paper); font-weight:700;}
+  .cost-total{
+    display:block;
+    font-size:22px;
+    font-weight:800;
+    color:var(--red-deep);
+    font-family:'Shippori Mincho', serif;
+  }
+  .cost-total b{font-size:26px;}
+
+  .btn-primary{
+    width:100%;
+    padding:16px;
+    border-radius:28px;
+    border:none;
+    background:linear-gradient(180deg, var(--red), var(--red-deep));
+    color:var(--cream);
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:17px;
+    letter-spacing:.06em;
+    cursor:pointer;
+    box-shadow:0 10px 26px rgba(179,39,60,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+    transition:transform .12s ease, box-shadow .2s ease;
+  }
+  .btn-primary:active{transform:translateY(2px); box-shadow:0 4px 14px rgba(179,39,60,0.3);}
+  .btn-primary:disabled{opacity:.4; cursor:not-allowed;}
+
+  .btn-ghost{
+    width:100%;
+    padding:13px;
+    border-radius:14px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--paper-dim);
+    font-size:13.5px;
+    letter-spacing:.04em;
+    cursor:pointer;
+    margin-top:10px;
+  }
+
+  /* ---------- drum stage ---------- */
+  #drumScreen{display:none;}
+  .drum-frame{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:8px 0 4px;
+  }
+  .drum-svg{width:100%; max-width:280px; touch-action:manipulation;}
+
+  .progress{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--paper-dim);
+    text-align:center;
+    margin-bottom:6px;
+  }
+  .progress b{color:var(--red-deep);}
+
+  .prompt{
+    text-align:center;
+    font-size:14px;
+    color:var(--paper);
+    margin:10px 0 4px;
+    min-height:20px;
+  }
+
+  /* ---------- result card ---------- */
+  .result-card{
+    width:100%;
+    border-radius:16px;
+    padding:22px 18px;
+    text-align:center;
+    margin-top:14px;
+    display:none;
+    border:2px solid var(--line);
+    animation:cardIn .5s cubic-bezier(.2,.9,.25,1);
+  }
+  @keyframes cardIn{
+    from{opacity:0; transform:translateY(14px) scale(.97);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .result-card.tier-jackpot{background:rgba(200,154,60,0.16); border-color:var(--gold);}
+  .result-card.tier-win{background:rgba(181,39,31,0.10); border-color:var(--red);}
+  .result-card.tier-small{background:rgba(31,93,66,0.10); border-color:var(--green);}
+  .result-card.tier-miss{background:rgba(107,90,65,0.06); border-color:var(--line);}
+
+  .result-label{
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:24px;
+    letter-spacing:.04em;
+  }
+  .tier-jackpot .result-label{color:var(--gold-soft);}
+  .tier-win .result-label{color:var(--red-deep);}
+  .tier-small .result-label{color:var(--green-deep);}
+  .tier-miss .result-label{color:var(--paper-dim);}
+
+  .result-prize{
+    font-size:16px;
+    font-weight:700;
+    margin-top:8px;
+    color:var(--paper);
+  }
+  .result-validity{
+    font-size:12px;
+    color:var(--paper-dim);
+    margin-top:6px;
+  }
+
+  /* ---------- name input ---------- */
+  .name-field{
+    margin-bottom:18px;
+  }
+  .name-field label{
+    display:block;
+    font-size:14.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    color:var(--paper);
+    margin-bottom:8px;
+  }
+  .section-label{
+    display:block;
+    font-size:14.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    color:var(--paper);
+    margin-bottom:8px;
+  }
+  .name-field input{
+    width:100%;
+    padding:13px 14px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:#ffffff;
+    color:var(--paper);
+    font-size:15px;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    outline:none;
+  }
+  .name-field input:focus{
+    border-color:var(--gold);
+  }
+  .name-field input::placeholder{
+    color:rgba(107,90,65,0.4);
+  }
+  .name-field select{
+    width:100%;
+    padding:13px 14px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:#ffffff;
+    color:var(--paper);
+    font-size:15px;
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    outline:none;
+    -webkit-appearance:none;
+    appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23B5271F' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    background-size:18px;
+  }
+  .name-field select:focus{
+    border-color:var(--gold);
+  }
+  .name-field.hidden{display:none;}
+  .name-field .required-mark{
+    color:var(--red);
+    margin-left:4px;
+    font-size:11px;
+  }
+  .name-field input.field-error{
+    border-color:var(--red);
+  }
+  .name-field select.field-error{
+    border-color:var(--red);
+  }
+  .field-error-msg{
+    font-size:11.5px;
+    color:var(--red);
+    margin-top:6px;
+    display:none;
+  }
+  .field-error-msg.show{display:block;}
+
+  /* ---------- send result ---------- */
+  .send-box{
+    width:100%;
+    margin-top:14px;
+  }
+  .btn-send{
+    width:100%;
+    padding:15px;
+    border-radius:26px;
+    border:2px solid var(--green);
+    background:rgba(31,93,66,0.08);
+    color:var(--green-deep);
+    font-family:'Shippori Mincho', serif;
+    font-weight:800;
+    font-size:16px;
+    letter-spacing:.05em;
+    cursor:pointer;
+    transition:transform .12s ease, background .2s ease, opacity .2s ease;
+  }
+  .btn-send:active{transform:translateY(2px);}
+  .btn-send:disabled{opacity:.55; cursor:default;}
+  .send-status{
+    text-align:center;
+    font-size:12px;
+    color:var(--paper-dim);
+    margin-top:10px;
+    min-height:16px;
+  }
+  .send-status.ok{color:var(--green-deep);}
+  .send-status.err{color:var(--red-deep);}
+
+  /* ---------- history ---------- */
+  .history{
+    width:100%;
+    margin-top:4px;
+  }
+  .history-title{
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--paper-dim);
+    margin-bottom:10px;
+    text-align:center;
+  }
+  .history-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .history-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:11px 14px;
+    border-radius:12px;
+    border:1.5px solid var(--line);
+    background:var(--bg-1);
+    font-size:13px;
+  }
+  .history-item .n{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--paper-dim);
+    font-size:11px;
+    width:34px;
+  }
+  .history-item .p{flex:1; text-align:left; padding:0 10px;}
+  .history-item .t{
+    font-size:11px;
+    padding:3px 9px;
+    border-radius:999px;
+    font-weight:700;
+    letter-spacing:.03em;
+  }
+  .t.tier-jackpot{background:rgba(200,154,60,0.22); color:var(--gold-soft);}
+  .t.tier-win{background:rgba(181,39,31,0.16); color:var(--red-deep);}
+  .t.tier-small{background:rgba(31,93,66,0.16); color:var(--green-deep);}
+  .t.tier-miss{background:rgba(107,90,65,0.10); color:var(--paper-dim);}
+
+  .finish-note{
+    text-align:center;
+    font-size:12px;
+    color:var(--paper-dim);
+    margin-top:16px;
+    line-height:1.8;
+  }
+
+  footer{
+    font-size:10.5px;
+    color:rgba(107,90,65,0.5);
+    text-align:center;
+    letter-spacing:.06em;
+    margin-top:6px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div>
+    <img class="header-logo" src="assets/logo.png" alt="冬の大抽選会 ガラポンチャレンジ">
+    <div class="shopname" id="shopNameLabel"></div>
+    <div class="tagline">貯めたポイントでガラポン挑戦！<br>何が当たるかは回してからのお楽しみ♪</div>
+  </div>
+
+  <!-- ================= 回数セット画面 ================= -->
+  <div class="panel" id="setup">
+    <div class="name-field" id="shopField">
+      <label>系列店舗</label>
+      <select id="shopSelect"></select>
+    </div>
+    <div class="name-field" id="castField">
+      <label>担当キャスト<span class="required-mark">必須</span></label>
+      <select id="castSelect"></select>
+      <div class="field-error-msg" id="castError">担当キャストを選択してください</div>
+    </div>
+    <div class="name-field">
+      <label>予約名<span class="required-mark">必須</span></label>
+      <input type="text" id="customerNameInput" placeholder="例: 山田様" required>
+      <div class="field-error-msg" id="customerNameError">予約名を入力してください</div>
+    </div>
+    <label class="section-label">本日のチャレンジ回数</label>
+    <div class="stepper">
+      <button type="button" id="minusBtn">－</button>
+      <div class="count" id="countLabel">1</div>
+      <button type="button" id="plusBtn" class="plus">＋</button>
+    </div>
+    <div class="cost-line">
+      <span class="cost-detail">1回 <b id="ptPerDrawLabel">1000</b>pt ×<span id="costCountLabel">1</span>回</span>
+      <span class="cost-total">＝ <b id="totalCostLabel">1000</b>pt</span>
+    </div>
+    <button class="btn-primary" id="startBtn">チャレンジ開始</button>
+  </div>
+
+  <!-- ================= 抽選画面 ================= -->
+  <div class="panel" id="drumScreen">
+    <div class="progress"><b id="doneCount">0</b> / <span id="totalCount">1</span> 回目</div>
+
+    <div class="drum-frame">
+      <svg class="drum-svg" id="drumSvg" viewBox="0 0 240 260">
+        <!-- 台座 -->
+        <ellipse cx="120" cy="238" rx="86" ry="14" fill="#000" opacity="0.12"/>
+        <rect x="70" y="200" width="100" height="34" rx="8" fill="#8a5a2e"/>
+        <rect x="70" y="200" width="100" height="8" rx="4" fill="#a4713e"/>
+
+        <!-- 出口シュート -->
+        <path d="M96 200 L84 178 L156 178 L144 200 Z" fill="#FBF1DA" stroke="#C89A3C" stroke-width="1.5"/>
+
+        <!-- 玉 -->
+        <circle id="ballEl" cx="120" cy="140" r="15" fill="#c8c8c8" opacity="0"/>
+        <text id="ballGlyph" x="120" y="146" text-anchor="middle" font-family="'Shippori Mincho', serif" font-weight="800" font-size="15" fill="#FBF3E1" opacity="0"></text>
+
+        <!-- 抽選機ドラム本体（回転） -->
+        <g id="drumBody">
+          <circle cx="120" cy="110" r="72" fill="url(#drumGrad)" stroke="#A9791E" stroke-width="3"/>
+          <circle cx="120" cy="110" r="72" fill="none" stroke="#EBD9A6" stroke-width="1" opacity="0.6"/>
+          <!-- 格子模様 -->
+          <g stroke="#A9791E" stroke-width="1.2" opacity="0.4">
+            <line x1="120" y1="38" x2="120" y2="182"/>
+            <line x1="48" y1="110" x2="192" y2="110"/>
+            <line x1="70" y1="58" x2="170" y2="162"/>
+            <line x1="170" y1="58" x2="70" y2="162"/>
+          </g>
+          <circle cx="120" cy="110" r="20" fill="#B5271F" stroke="#FBF3E1" stroke-width="2"/>
+          <text x="120" y="116" text-anchor="middle" font-family="'Shippori Mincho', serif" font-weight="800" font-size="16" fill="#FBF3E1">運</text>
+        </g>
+
+        <defs>
+          <radialGradient id="drumGrad" cx="35%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#EFCE86"/>
+            <stop offset="100%" stop-color="#D8A93B"/>
+          </radialGradient>
+        </defs>
+
+        <!-- ハンドル -->
+        <g id="handleGroup">
+          <line x1="192" y1="110" x2="222" y2="110" stroke="#9B9188" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="222" cy="110" r="10" fill="#B5271F" stroke="#7A1710" stroke-width="2"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="prompt" id="promptText">画面をタップしてハンドルを回してください</div>
+    <button class="btn-primary" id="spinBtn">ガラポンを回す</button>
+
+    <div class="result-card" id="resultCard">
+      <div class="result-label" id="resultLabel"></div>
+      <div class="result-prize" id="resultPrize"></div>
+      <div class="result-validity" id="resultValidity"></div>
+    </div>
+
+    <button class="btn-primary" id="nextBtn" style="display:none; margin-top:14px;">次を回す</button>
+
+    <div class="history" id="historyBox" style="display:none;">
+      <div class="history-title">本日の結果</div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+
+    <div class="finish-note" id="finishNote" style="display:none;">
+      すべてのチャレンジが終了しました。画面をお客様にご確認いただき、当選内容をスタッフへお伝えください。
+    </div>
+
+    <div class="send-box" id="sendBox" style="display:none;">
+      <button class="btn-send" id="sendBtn">結果を送信</button>
+      <div class="send-status" id="sendStatus"></div>
+    </div>
+
+    <button class="btn-ghost" id="resetBtn" style="display:none;">次のお客様へ（リセット）</button>
+  </div>
+
+  <footer>本ページのURLはお客様へ共有しないでください</footer>
+</div>
+
+<script>
+/* =========================================================================
+   ▼▼▼ 店舗設定（このオブジェクトだけ書き換えればOK） ▼▼▼
+   ========================================================================= */
+const CONFIG = {
+  pointsPerDraw: 1000,          // 1回あたりの必要ポイント（表示用の目安。実際の消費はスタッフが手動管理）
+  maxDraws: 10,                 // 1回のチャレンジで選べる最大回数
+
+  // 結果の送信先（共通）。店舗ごとに送信先を分けたい場合は、下の shops の
+  // 各店舗に notifyEndpoint を指定してください（指定があればそちらが優先されます）。
+  // 空文字のままだと「結果を送信」ボタンは表示されません。
+  notifyEndpoint: "https://script.google.com/macros/s/AKfycbxQ1GecioIcKnAVOGcSe8Rg34Hy9wFOKi98Vbq5k2azOV1PL2NA4wee7SOmZ-XjY2Q3kw/exec",
+
+  // 系列店舗一覧。1店舗しかない場合も配列に1件だけ入れればOKです（その場合プルダウンは自動で隠れます）。
+  // castNames は、キャスト名プルダウンに出す一覧です。増減したらここを書き換えてください。
+  // notifyEndpoint を店舗ごとに個別指定したい場合はここに追記（未指定なら上の共通設定を使用）。
+  shops: [
+    {
+      name: "松山店",
+      castNames: ["浅倉沙織","飛鳥れい","天海ありさ","荒井美保","石田美希","伊藤ちあき","井上ひろみ","大久保美香","小川今日子","尾崎幸子","落合千鶴","川上菜々子","北山輝美","木村まこ","木本亜矢","白石友紀","世良あい","高井まどか","田中奈美","中谷たえ","新田多香子","野村あきな","平野あかり","堀田瞳","前田直子","松本美咲","水口真美","望月蘭","山崎あかね"],
+      notifyEndpoint: ""
+    },
+    {
+      name: "新居浜店",
+      castNames: ["荒井美保","尾崎幸子","栗原咲","松典子","山本めぐみ"],
+      notifyEndpoint: ""
+    }
+  ],
+
+  // 景品リスト。weight（重み）の合計に対する比率で当選確率が決まります。
+  // tier は 'jackpot' / 'win' / 'small' / 'miss' の4種類（見た目の色分けに使用）
+  prizes: [
+    {
+      tier: "jackpot",
+      label: "1等",
+      prize: "本指名料 無料券",
+      validity: "本日からご利用いただけます",
+      weight: 2
+    },
+    {
+      tier: "win",
+      label: "2等",
+      prize: "延長20分 プレゼント",
+      validity: "次回のご利用時に使えます",
+      weight: 8
+    },
+    {
+      tier: "small",
+      label: "3等",
+      prize: "ドリンク1本 サービス",
+      validity: "本日からご利用いただけます",
+      weight: 25
+    },
+    {
+      tier: "miss",
+      label: "残念賞",
+      prize: "またの挑戦をお待ちしております",
+      validity: "",
+      weight: 65
+    }
+  ]
+};
+/* ========================================================================= */
+
+const $ = (id) => document.getElementById(id);
+
+let totalDraws = 1;
+let doneDraws = 0;
+let spinning = false;
+let history = [];
+let customerName = "";
+let sent = false;
+let selectedShop = null;
+let selectedCast = "";
+
+function init(){
+  $("ptPerDrawLabel").textContent = CONFIG.pointsPerDraw.toLocaleString();
+  setupShopAndCastFields();
+  updateSetupUI();
+
+  $("minusBtn").addEventListener("click", () => { totalDraws = Math.max(1, totalDraws - 1); updateSetupUI(); });
+  $("plusBtn").addEventListener("click", () => { totalDraws = Math.min(CONFIG.maxDraws, totalDraws + 1); updateSetupUI(); });
+  $("shopSelect").addEventListener("change", onShopChange);
+  $("castSelect").addEventListener("change", () => {
+    $("castSelect").classList.remove("field-error");
+    $("castError").classList.remove("show");
+    selectedCast = $("castSelect").value;
+    saveLastCast();
+  });
+  $("customerNameInput").addEventListener("input", () => {
+    $("customerNameInput").classList.remove("field-error");
+    $("customerNameError").classList.remove("show");
+  });
+  $("startBtn").addEventListener("click", startChallenge);
+  $("spinBtn").addEventListener("click", doSpin);
+  $("nextBtn").addEventListener("click", doSpin);
+  $("resetBtn").addEventListener("click", resetAll);
+  $("sendBtn").addEventListener("click", sendResults);
+}
+
+const CAST_STORAGE_KEY = "garapon_last_cast_v1";
+
+function saveLastCast(){
+  if(!selectedShop || !selectedCast) return;
+  try{
+    localStorage.setItem(CAST_STORAGE_KEY, JSON.stringify({
+      shopName: selectedShop.name,
+      castName: selectedCast
+    }));
+  }catch(e){
+    // localStorageが使えない環境では無視（毎回選び直しになるだけ）
+  }
+}
+
+function loadLastCast(){
+  try{
+    const raw = localStorage.getItem(CAST_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    return null;
+  }
+}
+
+function setupShopAndCastFields(){
+  const shops = CONFIG.shops || [];
+  const shopSelect = $("shopSelect");
+  shopSelect.innerHTML = "";
+  shops.forEach((shop, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = shop.name;
+    shopSelect.appendChild(opt);
+  });
+
+  // 店舗が1つだけなら選択欄自体を隠す（自動選択される）
+  $("shopField").classList.toggle("hidden", shops.length <= 1);
+
+  const saved = loadLastCast();
+  let initialIndex = 0;
+  if(saved){
+    const foundIndex = shops.findIndex(s => s.name === saved.shopName);
+    if(foundIndex >= 0) initialIndex = foundIndex;
+  }
+  shopSelect.value = String(initialIndex);
+  selectedShop = shops[initialIndex] || null;
+  $("shopNameLabel").textContent = selectedShop ? selectedShop.name : "";
+  populateCastSelect(saved && saved.shopName === (selectedShop && selectedShop.name) ? saved.castName : "");
+}
+
+function onShopChange(){
+  const idx = Number($("shopSelect").value);
+  selectedShop = (CONFIG.shops || [])[idx] || null;
+  $("shopNameLabel").textContent = selectedShop ? selectedShop.name : "";
+  populateCastSelect("");
+}
+
+function populateCastSelect(restoreCastName){
+  const castSelect = $("castSelect");
+  castSelect.innerHTML = "";
+  const names = (selectedShop && selectedShop.castNames) || [];
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "選択してください";
+  castSelect.appendChild(placeholder);
+
+  names.forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    castSelect.appendChild(opt);
+  });
+
+  if(restoreCastName && names.includes(restoreCastName)){
+    castSelect.value = restoreCastName;
+    selectedCast = restoreCastName;
+  }else{
+    castSelect.value = "";
+    selectedCast = "";
+  }
+  $("castField").classList.toggle("hidden", names.length === 0);
+}
+
+function updateSetupUI(){
+  $("countLabel").textContent = totalDraws;
+  $("costCountLabel").textContent = totalDraws;
+  $("totalCostLabel").textContent = (CONFIG.pointsPerDraw * totalDraws).toLocaleString();
+}
+
+function startChallenge(){
+  const castSelect = $("castSelect");
+  const castVisible = !$("castField").classList.contains("hidden");
+  if(castVisible && !castSelect.value){
+    castSelect.classList.add("field-error");
+    $("castError").classList.add("show");
+    castSelect.focus();
+    return;
+  }
+  castSelect.classList.remove("field-error");
+  $("castError").classList.remove("show");
+
+  const nameInput = $("customerNameInput");
+  const value = nameInput.value.trim();
+  if(!value){
+    nameInput.classList.add("field-error");
+    $("customerNameError").classList.add("show");
+    nameInput.focus();
+    return;
+  }
+  nameInput.classList.remove("field-error");
+  $("customerNameError").classList.remove("show");
+
+  doneDraws = 0;
+  history = [];
+  sent = false;
+  customerName = value;
+  selectedCast = castSelect.value;
+  $("setup").style.display = "none";
+  $("drumScreen").style.display = "block";
+  $("totalCount").textContent = totalDraws;
+  $("doneCount").textContent = "0";
+  $("historyBox").style.display = "none";
+  $("historyList").innerHTML = "";
+  $("finishNote").style.display = "none";
+  $("sendBox").style.display = "none";
+  $("sendBtn").disabled = false;
+  $("sendBtn").textContent = "結果を送信";
+  $("sendStatus").textContent = "";
+  $("sendStatus").className = "send-status";
+  $("resetBtn").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("nextBtn").style.display = "none";
+  $("spinBtn").style.display = "block";
+  $("promptText").textContent = "画面をタップしてハンドルを回してください";
+}
+
+function pickPrize(){
+  const total = CONFIG.prizes.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * total;
+  for(const p of CONFIG.prizes){
+    if(r < p.weight) return p;
+    r -= p.weight;
+  }
+  return CONFIG.prizes[CONFIG.prizes.length - 1];
+}
+
+function doSpin(){
+  if(spinning) return;
+  spinning = true;
+
+  $("spinBtn").style.display = "none";
+  $("nextBtn").style.display = "none";
+  $("resultCard").style.display = "none";
+  $("promptText").textContent = "ガラガラガラ……";
+
+  const handle = $("handleGroup");
+  const drum = $("drumBody");
+  handle.style.transformOrigin = "222px 110px";
+  drum.style.transformOrigin = "120px 110px";
+  handle.style.transition = "transform 1.1s cubic-bezier(.3,.1,.3,1)";
+  drum.style.transition = "transform 1.1s cubic-bezier(.3,.1,.3,1)";
+  handle.style.transform = "rotate(1080deg)";
+  drum.style.transform = "rotate(720deg)";
+
+  setTimeout(() => {
+    const ball = $("ballEl");
+    const glyph = $("ballGlyph");
+    const prize = pickPrize();
+
+    const colorMap = {
+      jackpot: "#D8A93B",
+      win: "#B5271F",
+      small: "#1F5D42",
+      miss: "#9B9184"
+    };
+    const glyphMap = { jackpot: "祝", win: "当", small: "福", miss: "－" };
+
+    ball.setAttribute("fill", colorMap[prize.tier]);
+    glyph.textContent = glyphMap[prize.tier];
+    glyph.setAttribute("fill", "#FBF3E1");
+
+    ball.style.opacity = "1";
+    glyph.style.opacity = "1";
+    ball.style.transition = "transform 0.9s cubic-bezier(.25,.8,.3,1.2)";
+    ball.style.transform = "translateY(70px)";
+    glyph.style.transition = "transform 0.9s cubic-bezier(.25,.8,.3,1.2)";
+    glyph.style.transform = "translateY(70px)";
+
+    setTimeout(() => {
+      showResult(prize);
+      // 次のドローに備えてリセット
+      setTimeout(() => {
+        ball.style.transition = "none";
+        glyph.style.transition = "none";
+        ball.style.transform = "translateY(0)";
+        glyph.style.transform = "translateY(0)";
+        ball.style.opacity = "0";
+        glyph.style.opacity = "0";
+        handle.style.transition = "none";
+        drum.style.transition = "none";
+        handle.style.transform = "rotate(0deg)";
+        drum.style.transform = "rotate(0deg)";
+      }, 50);
+    }, 950);
+  }, 1150);
+}
+
+function showResult(prize){
+  doneDraws += 1;
+  history.push(prize);
+
+  $("doneCount").textContent = doneDraws;
+
+  const card = $("resultCard");
+  card.className = "result-card tier-" + prize.tier;
+  $("resultLabel").textContent = prize.label;
+  $("resultPrize").textContent = prize.prize;
+  $("resultValidity").textContent = prize.validity || "";
+  card.style.display = "block";
+
+  renderHistory();
+
+  spinning = false;
+
+  if(doneDraws >= totalDraws){
+    $("promptText").textContent = "お疲れさまでした！";
+    $("finishNote").style.display = "block";
+    if(resolveNotifyEndpoint()){
+      $("sendBox").style.display = "block";
+    }
+    $("resetBtn").style.display = "block";
+  } else {
+    $("promptText").textContent = "次のガラポンにいきましょう";
+    $("nextBtn").style.display = "block";
+  }
+}
+
+function resolveNotifyEndpoint(){
+  // 店舗ごとに notifyEndpoint が指定されていればそちらを優先し、
+  // なければ CONFIG の共通 notifyEndpoint を使う
+  return (selectedShop && selectedShop.notifyEndpoint) || CONFIG.notifyEndpoint || "";
+}
+
+function renderHistory(){
+  $("historyBox").style.display = "block";
+  const list = $("historyList");
+  list.innerHTML = "";
+  history.forEach((p, i) => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+    row.innerHTML =
+      '<span class="n">' + (i + 1) + '回目</span>' +
+      '<span class="p">' + p.prize + '</span>' +
+      '<span class="t tier-' + p.tier + '">' + p.label + '</span>';
+    list.appendChild(row);
+  });
+}
+
+async function sendResults(){
+  const endpoint = resolveNotifyEndpoint();
+  if(sent || !endpoint) return;
+
+  const btn = $("sendBtn");
+  const status = $("sendStatus");
+  btn.disabled = true;
+  btn.textContent = "送信中…";
+  status.className = "send-status";
+  status.textContent = "";
+
+  const payload = {
+    customerName: customerName || "(未入力)",
+    castName: selectedCast || "(未選択)",
+    shopName: (selectedShop && selectedShop.name) || "",
+    sentAt: new Date().toISOString(),
+    totalDraws: history.length,
+    results: history.map((p, i) => ({
+      no: i + 1,
+      tier: p.tier,
+      label: p.label,
+      prize: p.prize,
+      validity: p.validity || ""
+    }))
+  };
+
+  try{
+    // Google Apps Script の Web アプリは通常のCORSに対応していないため、
+    // no-cors + text/plain で送信します（レスポンス内容は読み取れません）。
+    await fetch(endpoint, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    sent = true;
+    btn.textContent = "送信しました ✓";
+    status.textContent = "スタッフへ結果を送信しました。";
+    status.className = "send-status ok";
+  }catch(err){
+    btn.disabled = false;
+    btn.textContent = "結果を送信";
+    status.textContent = "送信に失敗しました。電波状況をご確認のうえ、もう一度お試しください。";
+    status.className = "send-status err";
+  }
+}
+
+function resetAll(){
+  totalDraws = 1;
+  customerName = "";
+  sent = false;
+  $("customerNameInput").value = "";
+  $("customerNameInput").classList.remove("field-error");
+  $("customerNameError").classList.remove("show");
+  $("castSelect").classList.remove("field-error");
+  $("castError").classList.remove("show");
+  // 系列店舗・担当キャストの選択は、次のお客様のためにあえてリセットしない
+  $("drumScreen").style.display = "none";
+  $("setup").style.display = "block";
+  updateSetupUI();
+}
+
+init();
+</script>
+</body>
+</html>
