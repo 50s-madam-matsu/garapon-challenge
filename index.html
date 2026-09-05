@@ -94,14 +94,15 @@
   .tagline{
     display:block;
     width:fit-content;
-    max-width:300px;
+    max-width:320px;
     margin:14px auto 0;
     background:linear-gradient(180deg, var(--teal), var(--teal-deep));
     color:var(--cream);
-    font-size:13px;
+    font-size:15.5px;
+    font-weight:700;
     text-align:center;
-    line-height:1.8;
-    padding:9px 20px;
+    line-height:1.7;
+    padding:10px 20px;
     border-radius:999px;
     box-shadow:0 6px 16px rgba(31,96,103,0.28);
   }
@@ -701,9 +702,9 @@
 /* =========================================================================
    ▼▼▼ 店舗設定（このオブジェクトだけ書き換えればOK） ▼▼▼
    ========================================================================= */
-// ▼ 当選特典の有効期限（公式サイトの企画ページで正式な期間を告知する運用のため、
-//   ここでは日付を書かず「公式サイト参照」としています。期間を明記したくなったら書き換えてください）
-const VALIDITY_NOTE = "有効期限は公式サイトの案内をご確認ください";
+// ▼ 当選特典の有効期限の注記。空文字にすると結果画面・メール・スプレッドシートの
+//   どこにも有効期限が表示されなくなります（公式サイト側で案内する運用のため）
+const VALIDITY_NOTE = "";
 
 const CONFIG = {
   pointsPerDraw: 1000,          // 1回あたりの必要ポイント（表示用の目安。実際の消費はスタッフが手動管理）
