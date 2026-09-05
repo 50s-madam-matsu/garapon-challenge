@@ -107,6 +107,40 @@
   }
 
   /* ---------- panel shell ---------- */
+  /* ---------- pending resend banner ---------- */
+  .pending-banner{
+    width:100%;
+    background:#FFF3D6;
+    border:2px solid var(--gold);
+    border-radius:16px;
+    padding:16px;
+    margin-top:14px;
+  }
+  .pending-title{
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--red-deep);
+    margin-bottom:6px;
+  }
+  .pending-detail{
+    font-size:12.5px;
+    color:var(--paper-dim);
+    margin-bottom:12px;
+    line-height:1.6;
+  }
+  .pending-actions{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .pending-actions .btn-primary{
+    padding:12px;
+    font-size:14px;
+  }
+  .pending-actions .btn-ghost{
+    margin-top:0;
+  }
+
   .panel{
     width:100%;
     background:var(--bg-1);
@@ -543,6 +577,15 @@
     <div class="tagline">貯めたポイントでガラポン挑戦！<br>何が当たるかは回してからのお楽しみ♪</div>
   </div>
 
+  <div class="pending-banner" id="pendingBanner" style="display:none;">
+    <div class="pending-title">⚠ 前回、送信できなかった結果があります</div>
+    <div class="pending-detail" id="pendingDetail"></div>
+    <div class="pending-actions">
+      <button class="btn-primary" id="pendingSendBtn">送信する</button>
+      <button class="btn-ghost" id="pendingDismissBtn">この結果を削除する</button>
+    </div>
+  </div>
+
   <!-- ================= 回数セット画面 ================= -->
   <div class="panel" id="setup">
     <div class="name-field" id="shopField">
@@ -658,6 +701,10 @@
 /* =========================================================================
    ▼▼▼ 店舗設定（このオブジェクトだけ書き換えればOK） ▼▼▼
    ========================================================================= */
+// ▼ 当選特典の有効期限（公式サイトの企画ページで正式な期間を告知する運用のため、
+//   ここでは日付を書かず「公式サイト参照」としています。期間を明記したくなったら書き換えてください）
+const VALIDITY_NOTE = "有効期限は公式サイトの案内をご確認ください";
+
 const CONFIG = {
   pointsPerDraw: 1000,          // 1回あたりの必要ポイント（表示用の目安。実際の消費はスタッフが手動管理）
   maxDraws: 10,                 // 1回のチャレンジで選べる最大回数
@@ -690,21 +737,21 @@ const CONFIG = {
       tier: "jackpot",
       label: "1等",
       prize: "本指名料 無料券",
-      validity: "本日からご利用いただけます",
+      validity: VALIDITY_NOTE,
       weight: 2
     },
     {
       tier: "win",
       label: "2等",
       prize: "延長20分 プレゼント",
-      validity: "次回のご利用時に使えます",
+      validity: VALIDITY_NOTE,
       weight: 8
     },
     {
       tier: "small",
       label: "3等",
       prize: "ドリンク1本 サービス",
-      validity: "本日からご利用いただけます",
+      validity: VALIDITY_NOTE,
       weight: 25
     },
     {
@@ -733,6 +780,7 @@ function init(){
   $("ptPerDrawLabel").textContent = CONFIG.pointsPerDraw.toLocaleString();
   setupShopAndCastFields();
   updateSetupUI();
+  checkPendingSend();
 
   $("minusBtn").addEventListener("click", () => { totalDraws = Math.max(1, totalDraws - 1); updateSetupUI(); });
   $("plusBtn").addEventListener("click", () => { totalDraws = Math.min(CONFIG.maxDraws, totalDraws + 1); updateSetupUI(); });
@@ -1025,18 +1073,37 @@ function renderHistory(){
   });
 }
 
-async function sendResults(){
-  const endpoint = resolveNotifyEndpoint();
-  if(sent || !endpoint) return;
+const PENDING_KEY = "garapon_pending_send_v1";
 
-  const btn = $("sendBtn");
-  const status = $("sendStatus");
-  btn.disabled = true;
-  btn.textContent = "送信中…";
-  status.className = "send-status";
-  status.textContent = "";
+function savePendingPayload(payload){
+  try{ localStorage.setItem(PENDING_KEY, JSON.stringify(payload)); }catch(e){ /* 無視 */ }
+}
+function clearPendingPayload(){
+  try{ localStorage.removeItem(PENDING_KEY); }catch(e){ /* 無視 */ }
+}
+function loadPendingPayload(){
+  try{
+    const raw = localStorage.getItem(PENDING_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){
+    return null;
+  }
+}
 
-  const payload = {
+// Google Apps Script への実際の送信処理（新規送信・再送信の両方から使う共通処理）
+async function postToEndpoint(endpoint, payload){
+  // Google Apps Script の Web アプリは通常のCORSに対応していないため、
+  // no-cors + text/plain で送信します（レスポンス内容は読み取れません）。
+  await fetch(endpoint, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+}
+
+function buildPayload(){
+  return {
     customerName: customerName || "(未入力)",
     castName: selectedCast || "(未選択)",
     shopName: (selectedShop && selectedShop.name) || "",
@@ -1050,17 +1117,27 @@ async function sendResults(){
       validity: p.validity || ""
     }))
   };
+}
+
+async function sendResults(){
+  const endpoint = resolveNotifyEndpoint();
+  if(sent || !endpoint) return;
+
+  const btn = $("sendBtn");
+  const status = $("sendStatus");
+  btn.disabled = true;
+  btn.textContent = "送信中…";
+  status.className = "send-status";
+  status.textContent = "";
+
+  const payload = buildPayload();
+  // 送信前に一時保存しておき、途中で失敗・アプリを閉じても後から再送信できるようにする
+  savePendingPayload({ endpoint, payload });
 
   try{
-    // Google Apps Script の Web アプリは通常のCORSに対応していないため、
-    // no-cors + text/plain で送信します（レスポンス内容は読み取れません）。
-    await fetch(endpoint, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
+    await postToEndpoint(endpoint, payload);
 
+    clearPendingPayload();
     sent = true;
     btn.textContent = "送信しました ✓";
     status.textContent = "スタッフへ結果を送信しました。";
@@ -1074,9 +1151,42 @@ async function sendResults(){
   }catch(err){
     btn.disabled = false;
     btn.textContent = "結果を送信";
-    status.textContent = "送信に失敗しました。電波状況をご確認のうえ、もう一度お試しください。";
+    status.textContent = "送信に失敗しました。電波状況をご確認のうえ、もう一度お試しください（アプリを閉じても、次に開いたときに再送信できます）。";
     status.className = "send-status err";
   }
+}
+
+// 前回、送信できずに終わってしまった結果がないかチェックし、あれば再送信を促す
+function checkPendingSend(){
+  const pending = loadPendingPayload();
+  if(!pending || !pending.endpoint || !pending.payload) return;
+
+  const banner = $("pendingBanner");
+  const detail = $("pendingDetail");
+  const p = pending.payload;
+  detail.textContent =
+    (p.shopName || "") + " ／ " + (p.castName || "") + " ／ " +
+    (p.customerName || "") + " 様（" + (p.totalDraws || (p.results||[]).length) + "回）";
+  banner.style.display = "block";
+
+  $("pendingSendBtn").onclick = async () => {
+    $("pendingSendBtn").disabled = true;
+    $("pendingSendBtn").textContent = "送信中…";
+    try{
+      await postToEndpoint(pending.endpoint, pending.payload);
+      clearPendingPayload();
+      banner.style.display = "none";
+    }catch(e){
+      $("pendingSendBtn").disabled = false;
+      $("pendingSendBtn").textContent = "送信する";
+      alert("送信に失敗しました。電波の良い場所でもう一度お試しください。");
+    }
+  };
+
+  $("pendingDismissBtn").onclick = () => {
+    clearPendingPayload();
+    banner.style.display = "none";
+  };
 }
 
 function resetAll(){
@@ -1096,6 +1206,13 @@ function resetAll(){
 }
 
 init();
+
+// ブラウザ/端末の「戻る」操作で誤ってページを離れてしまうのを防ぐ
+// （抽選中や送信前に離脱してしまうと、その回のデータが失われるため）
+history.pushState(null, "", location.href);
+window.addEventListener("popstate", () => {
+  history.pushState(null, "", location.href);
+});
 </script>
 </body>
 </html>
