@@ -471,6 +471,20 @@
     display:none;
   }
   .field-error-msg.show{display:block;}
+  .start-error{
+    display:none;
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:#fdecea;
+    border:1.5px solid var(--red);
+    color:var(--red-deep);
+    font-size:17px;
+    font-weight:700;
+    line-height:1.5;
+    text-align:center;
+  }
+  .start-error.show{display:block;}
 
   /* ---------- send result ---------- */
   .send-box{
@@ -622,6 +636,7 @@
       <span class="cost-total">＝ <b id="totalCostLabel">1000</b>pt</span>
     </div>
     <button class="btn-primary" id="startBtn">チャレンジ開始</button>
+    <div class="start-error" id="startError"></div>
   </div>
 
   <!-- ================= 抽選画面 ================= -->
@@ -716,7 +731,7 @@ const VALIDITY_NOTE = "";
 
 const CONFIG = {
   pointsPerDraw: 1000,          // 1回あたりの必要ポイント（表示用の目安。実際の消費はスタッフが手動管理）
-  maxDraws: 10,                 // 1回のチャレンジで選べる最大回数
+  maxDraws: 5,                  // 1回のチャレンジで選べる最大回数
 
   // 結果の送信先（共通）。店舗ごとに送信先を分けたい場合は、下の shops の
   // 各店舗に notifyEndpoint を指定してください（指定があればそちらが優先されます）。
@@ -741,34 +756,39 @@ const CONFIG = {
 
   // 景品リスト。weight（重み）の合計に対する比率で当選確率が決まります。
   // tier は 'jackpot' / 'win' / 'small' / 'miss' の4種類（見た目の色分けに使用）
+  //
+  // 【本数の上限（在庫）について】
+  // 上限本数は Code.gs の PRIZE_STOCK で管理します（label をキーにして指定）。
+  // 上限に達した等級は自動で抽選から外れ、他の等級に確率が配分されます。
+  // label は Code.gs の PRIZE_STOCK のキーと完全に一致させてください。
   prizes: [
     {
       tier: "jackpot",
       label: "1等",
-      prize: "本指名料 無料券",
+      prize: "10,000円OFF（120分以上）",
       validity: VALIDITY_NOTE,
       weight: 2
     },
     {
       tier: "win",
       label: "2等",
-      prize: "延長20分 プレゼント",
+      prize: "3,000円OFF（90分以上）",
       validity: VALIDITY_NOTE,
-      weight: 8
+      weight: 2.5
     },
     {
       tier: "small",
       label: "3等",
-      prize: "ドリンク1本 サービス",
+      prize: "指定オプション1点 無料",
       validity: VALIDITY_NOTE,
-      weight: 25
+      weight: 6
     },
     {
       tier: "miss",
       label: "残念賞",
-      prize: "またの挑戦をお待ちしております",
+      prize: "500ptプレゼント",
       validity: "",
-      weight: 65
+      weight: 89.5
     }
   ]
 };
@@ -784,6 +804,8 @@ let customerName = "";
 let sent = false;
 let selectedShop = null;
 let selectedCast = "";
+let remainingStock = {};   // 等級ごとの残り本数（上限のある等級のみ）。チャレンジ開始時にサーバーから取得
+let starting = false;      // 在庫確認中の二重タップ防止
 
 function init(){
   $("ptPerDrawLabel").textContent = CONFIG.pointsPerDraw.toLocaleString();
@@ -904,7 +926,25 @@ function updateSetupUI(){
   $("totalCostLabel").textContent = (CONFIG.pointsPerDraw * totalDraws).toLocaleString();
 }
 
-function startChallenge(){
+// サーバー（Apps Script）から各等級の残り本数を取得する。失敗時は例外を投げる。
+async function fetchRemainingStock(){
+  const endpoint = resolveNotifyEndpoint();
+  if(!endpoint) return {};   // 送信先なし＝在庫管理なし（上限なしで動作）
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try{
+    const sep = endpoint.indexOf("?") >= 0 ? "&" : "?";
+    const res = await fetch(endpoint + sep + "action=stock&t=" + Date.now(), { signal: ctrl.signal });
+    const json = await res.json();
+    if(!json || json.status !== "ok" || typeof json.remaining !== "object") throw new Error("bad response");
+    return json.remaining;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function startChallenge(){
+  if(starting) return;
   const castSelect = $("castSelect");
   const castVisible = !$("castField").classList.contains("hidden");
   if(castVisible && !castSelect.value){
@@ -926,6 +966,26 @@ function startChallenge(){
   }
   nameInput.classList.remove("field-error");
   $("customerNameError").classList.remove("show");
+
+  // 残り本数の確認（通信できない場合は開始しない）
+  starting = true;
+  const startBtn = $("startBtn");
+  startBtn.disabled = true;
+  startBtn.textContent = "確認中…";
+  $("startError").classList.remove("show");
+  try{
+    remainingStock = await fetchRemainingStock();
+  }catch(e){
+    starting = false;
+    startBtn.disabled = false;
+    startBtn.textContent = "チャレンジ開始";
+    $("startError").textContent = "通信できませんでした。電波の良い場所で、もう一度「チャレンジ開始」を押してください。";
+    $("startError").classList.add("show");
+    return;
+  }
+  starting = false;
+  startBtn.disabled = false;
+  startBtn.textContent = "チャレンジ開始";
 
   doneDraws = 0;
   history = [];
@@ -953,13 +1013,18 @@ function startChallenge(){
 }
 
 function pickPrize(){
-  const total = CONFIG.prizes.reduce((s, p) => s + p.weight, 0);
+  // 残り本数が0の等級は抽選から外す（上限のない等級は常に対象）
+  const pool = CONFIG.prizes.filter(p => remainingStock[p.label] === undefined || remainingStock[p.label] > 0);
+  const total = pool.reduce((s, p) => s + p.weight, 0);
   let r = Math.random() * total;
-  for(const p of CONFIG.prizes){
-    if(r < p.weight) return p;
+  let chosen = pool[pool.length - 1];
+  for(const p of pool){
+    if(r < p.weight){ chosen = p; break; }
     r -= p.weight;
   }
-  return CONFIG.prizes[CONFIG.prizes.length - 1];
+  // このチャレンジ内で続けて回す場合に備え、手元の残り本数も減らしておく
+  if(remainingStock[chosen.label] !== undefined) remainingStock[chosen.label]--;
+  return chosen;
 }
 
 function doSpin(){
