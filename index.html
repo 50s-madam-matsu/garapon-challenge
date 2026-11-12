@@ -380,6 +380,32 @@
     cursor:pointer;
   }
   .result-close-btn:active{transform:translateY(2px);}
+  /* 途中の回では「次を回す」を主ボタンにして、「とじる」は控えめにする */
+  .result-next-btn{
+    display:none;
+    width:100%;
+    margin-top:30px;
+    padding:16px 20px;
+    border-radius:999px;
+    border:none;
+    background:linear-gradient(180deg, var(--red), var(--red-deep));
+    color:var(--cream);
+    font-size:20px;
+    font-weight:800;
+    letter-spacing:.06em;
+    cursor:pointer;
+    box-shadow:0 4px 0 rgba(0,0,0,.18);
+  }
+  .result-next-btn:active{transform:translateY(2px);}
+  .result-card.has-next .result-next-btn{display:block;}
+  .result-card.has-next .result-close-btn{
+    margin-top:16px;
+    padding:8px 22px;
+    background:transparent;
+    color:var(--paper-dim);
+    border:1.5px solid var(--line);
+    font-size:13px;
+  }
 
   .result-prize{
     font-size:17px;
@@ -719,6 +745,7 @@
     <div class="result-label" id="resultLabel"></div>
     <div class="result-prize" id="resultPrize"></div>
     <div class="result-validity" id="resultValidity"></div>
+    <button class="result-next-btn" id="resultNextBtn">次を回す</button>
     <button class="result-close-btn" id="resultCloseBtn">とじる</button>
   </div>
 </div>
@@ -834,6 +861,7 @@ function init(){
   $("resetBtn").addEventListener("click", resetAll);
   $("sendBtn").addEventListener("click", sendResults);
   $("resultCloseBtn").addEventListener("click", closeResultOverlay);
+  $("resultNextBtn").addEventListener("click", doSpin);
   $("resultOverlay").addEventListener("click", (e) => {
     if(e.target.id === "resultOverlay") closeResultOverlay();
   });
@@ -1101,6 +1129,12 @@ function showResult(prize){
   $("resultLabel").textContent = prize.label;
   $("resultPrize").textContent = prize.prize;
   $("resultValidity").textContent = prize.validity || "";
+  // まだ回数が残っているときは、ポップアップ内に「次を回す」を出す
+  const remaining = totalDraws - doneDraws;
+  if(remaining > 0){
+    card.classList.add("has-next");
+    $("resultNextBtn").textContent = "次を回す（残り" + remaining + "回）";
+  }
   $("resultOverlay").classList.add("show");
 
   renderHistory();
